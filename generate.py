@@ -167,7 +167,7 @@ def edm_sampler_memorization_time_independent(
     boosting, time_min, time_max, vpsde, dg_weight_1st_order, dg_weight_2nd_order, discriminator_L, discriminator_S,
     net, latents, class_labels=None, randn_like=torch.randn_like,
     num_steps=18, sigma_min=0.002, sigma_max=80, rho=7,
-    S_churn=0, S_min=0, S_max=float('inf'), S_noise=1,
+    S_churn=0, S_min=0, S_max=float('inf'), S_noise=1, tweedie='DPS'
 ):
     # Adjust noise levels based on what's supported by the network.
     sigma_min = max(sigma_min, net.sigma_min)
@@ -256,32 +256,34 @@ def edm_sampler_memorization_time_independent(
         ## DG correction
         if i > 9 and dg_weight_1st_order != 0.:
 
-            from guided_diffusion.gaussian_diffusion import GaussianDiffusion, get_named_beta_schedule, ModelVarType, ModelMeanType
-            betas = get_named_beta_schedule('linear', num_steps)
-            # print(betas, betas.shape)
-            betas = np.clip(betas, 0, 1)
-            
-            t = torch.tensor([num_steps - i -1]*t_hat.shape[0], device=t_cur.device)
-            
-            
-            # print(t_cur.shape, t_cur, t_hat.shape, x_cur.shape, x_hat.shape, betas.shape)
-            gaus = GaussianDiffusion(betas=betas,
-                                    model_mean_type=ModelMeanType.EPSILON,
-                                    model_var_type=ModelVarType.FIXED_LARGE, #LEARNED_RANGE,
-                                    loss_type='')
-            
-            dict_out = gaus.p_mean_variance(net, x_cur, t)
-            # print(dict_out[''])
-            
-            x_temp = dict_out['pred_xstart']
+            if tweedie == 'DPS':
+                
 
-            # ## USING MY IMPLEMENTATION OF TWEEDIES ##
-            # temp = net(x_cur, t_cur, class_labels).to(torch.float64)
-    
-            # # Use tweedie's formula
-            # # vpsde = classifier_lib.vpsde()
-            # mean, std = vpsde.marginal_prob(t_cur)
-            # x_temp = (x_cur + temp * std ) / mean
+                from guided_diffusion.gaussian_diffusion import GaussianDiffusion, get_named_beta_schedule, ModelVarType, ModelMeanType
+                betas = get_named_beta_schedule('linear', num_steps)
+                # print(betas, betas.shape)
+                betas = np.clip(betas, 0, 1)
+                
+                t = torch.tensor([num_steps - i -1]*t_hat.shape[0], device=t_cur.device)
+                
+                gaus = GaussianDiffusion(betas=betas,
+                                        model_mean_type=ModelMeanType.EPSILON,
+                                        model_var_type=ModelVarType.FIXED_LARGE, #LEARNED_RANGE,
+                                        loss_type='')
+                
+                dict_out = gaus.p_mean_variance(net, x_cur, t)
+                
+                x_temp = dict_out['pred_xstart']
+
+            elif tweedie == 'formula':
+                    
+                ## USING MY IMPLEMENTATION OF TWEEDIES ##
+                temp = net(x_cur, t_cur, class_labels).to(torch.float64)
+        
+                # Use tweedie's formula
+                # vpsde = classifier_lib.vpsde()
+                mean, std = vpsde.marginal_prob(t_cur)
+                x_temp = (x_cur + temp * std ) / mean
 
             
             discriminator_guidance, log_ratio = classifier_lib.get_grad_log_ratio(discriminator_L, vpsde, x_temp, t_hat, net.img_resolution, time_min, time_max, class_labels, log=True)
