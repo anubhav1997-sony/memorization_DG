@@ -21,4 +21,3 @@ with tf.io.gfile.GFile(outfile, "wb") as fout:
     # else:
     #     np.savez_compressed(io_buffer, samples=images_np, label=class_labels.cpu().numpy())
     fout.write(io_buffer.getvalue())
-    

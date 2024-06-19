@@ -16,7 +16,6 @@ import torch
 import dnnlib
 import random
 from glob import glob
-
 #----------------------------------------------------------------------------
 
 def calculate_inception_stats_npz(image_path, num_samples=50000, device=torch.device('cuda'),
