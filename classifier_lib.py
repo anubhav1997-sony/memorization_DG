@@ -3,6 +3,7 @@ from guided_diffusion.script_util import create_classifier
 import os
 import numpy as np
 
+
 def get_discriminator(latent_extractor_ckpt, discriminator_ckpt, condition, img_resolution=32, device='cuda', enable_grad=True):
     classifier = load_classifier(latent_extractor_ckpt, img_resolution, device, eval=True)
     discriminator = load_discriminator(discriminator_ckpt, device, condition, eval=True)
@@ -12,6 +13,7 @@ def get_discriminator(latent_extractor_ckpt, discriminator_ckpt, condition, img_
             prediction = discriminator(adm_features, timesteps, sigmoid=True, condition=condition).view(-1)
         return prediction
     return evaluate
+
 
 def load_classifier(ckpt_path, img_resolution, device, eval=True):
     classifier_args = dict(
